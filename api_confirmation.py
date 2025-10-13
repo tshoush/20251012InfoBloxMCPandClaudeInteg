@@ -27,8 +27,22 @@ class APICallConfirmation:
     """Handles API call preview, confirmation, and editing"""
 
     def __init__(self):
-        self.settings = get_settings()
-        self.base_url = self.settings.get_infoblox_base_url()
+        self._settings = None
+        self._base_url = None
+
+    @property
+    def settings(self):
+        """Lazy load settings only when needed"""
+        if self._settings is None:
+            self._settings = get_settings()
+        return self._settings
+
+    @property
+    def base_url(self):
+        """Lazy load base URL only when needed"""
+        if self._base_url is None:
+            self._base_url = self.settings.get_infoblox_base_url()
+        return self._base_url
 
     def map_tool_to_api_call(self, tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Map tool call to API details (method, path, params)"""
