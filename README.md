@@ -4,6 +4,26 @@ Enterprise-grade InfoBlox DDI management with Claude AI integration, featuring c
 
 ## 🚀 Quick Start
 
+### Option 1: Interactive Setup (Easiest) 🆕
+
+```bash
+# Clone the repository
+git clone https://github.com/tshoush/20251012InfoBloxMCPandClaudeInteg.git
+cd 20251012InfoBloxMCPandClaudeInteg
+
+# Just run any chat interface - it will prompt for configuration!
+python claude-chat-rag.py
+```
+
+**That's it!** The script will interactively prompt for:
+- InfoBlox hostname, username, password
+- Claude API key
+- Optional settings (WAPI version, SSL verification, log level)
+
+Then offers to save everything to a `.env` file. **Zero manual configuration!**
+
+### Option 2: Manual Setup (Traditional)
+
 ```bash
 # Clone the repository
 git clone https://github.com/tshoush/20251012InfoBloxMCPandClaudeInteg.git
@@ -15,13 +35,11 @@ export INFOBLOX_USER="admin"
 export INFOBLOX_PASSWORD="your-password"
 export ANTHROPIC_API_KEY="sk-ant-..."
 
-# Deploy + Auto-configure MCP server in Claude Desktop (recommended)
+# Deploy + Auto-configure MCP server in Claude Desktop
 ./deploy.py --local --setup-mcp
 
 # Restart Claude Desktop - MCP server auto-attached! 🔌
 ```
-
-**That's it!** The MCP server is automatically configured - no manual setup required.
 
 ## 📋 What's Included
 
@@ -29,9 +47,50 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 - **InfoBlox MCP Server** - Model Context Protocol server exposing 140+ InfoBlox WAPI endpoints
 - **Claude Chat Interfaces** - Multiple chat interfaces with different capabilities
+- **Interactive Configuration** - Auto-prompts for missing settings, saves to .env (NEW! 🆕)
 - **API Confirmation System** - User-controlled API execution with preview & edit capability (NEW!)
 - **RAG System** - Vector database for InfoBlox documentation
 - **Security Framework** - Comprehensive security modules (Phase 1 & 2 complete)
+
+### Interactive Configuration (NEW! 🆕)
+
+No environment variables? No problem! Just run any chat interface and it will guide you through setup:
+
+```
+══════════════════════════════════════════════════════════════════
+               🔧 Configuration Setup
+══════════════════════════════════════════════════════════════════
+
+This script requires environment variables to connect to InfoBlox
+and Claude AI. Let's set them up!
+
+InfoBlox Configuration
+──────────────────────────────────────────────────────────────────
+
+  Hostname or IP address of your InfoBlox server
+InfoBlox Host [192.168.1.224]:
+
+  Username for InfoBlox authentication
+InfoBlox Username [admin]:
+
+  Password for InfoBlox authentication
+InfoBlox Password: ●●●●●●●●
+
+...
+
+Save configuration to .env file? (yes/no) [yes]:
+✓ Configuration saved to: /path/to/.env
+✓ Environment variables set for current session
+✓ Setup complete! You can now use the chat interfaces.
+```
+
+**Features:**
+- ✅ **Auto-detects missing settings** - Prompts only for what's needed
+- ✅ **Secure password entry** - Password masked during input
+- ✅ **Smart defaults** - Press Enter to accept suggested values
+- ✅ **Saves to .env** - Optionally saves configuration for reuse
+- ✅ **File permissions** - Sets .env to 600 (owner read/write only)
+- ✅ **Backup existing** - Creates .env.backup before overwriting
 
 ### API Confirmation System (NEW!) ✨
 

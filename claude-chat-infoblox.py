@@ -2,14 +2,21 @@
 """Interactive chat interface for Claude AI with InfoBlox WAPI integration"""
 
 # Import security modules
-from config import get_settings
+from config import get_settings, ConfigurationError
 from logging_config import setup_logging, get_security_logger
 from validators import InputValidator, ValidationError
 from api_confirmation import api_confirmation
 import logging
 
-# Load secure configuration
-settings = get_settings()
+# Try to load configuration, prompt if missing
+try:
+    settings = get_settings()
+except ConfigurationError:
+    # Import and run interactive configuration
+    from interactive_config import check_and_prompt_if_needed
+    check_and_prompt_if_needed()
+    # Now load settings after interactive setup
+    settings = get_settings()
 
 # Setup logging
 setup_logging(
