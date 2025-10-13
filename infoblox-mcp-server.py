@@ -3,29 +3,47 @@
 InfoBlox MCP Server
 Dynamic Model Context Protocol server for InfoBlox WAPI
 Automatically discovers and exposes all WAPI endpoints as tools
+
+SECURITY: Uses centralized configuration, input validation, and structured logging
 """
 
 import json
 import os
 import hashlib
+import logging
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 import requests
-from urllib3.exceptions import InsecureRequestWarning
-
-# Suppress SSL warnings
-requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from ratelimit import limits, sleep_and_retry
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent, GetPromptResult, Prompt, PromptMessage
 
-# InfoBlox Configuration
-INFOBLOX_HOST = os.getenv("INFOBLOX_HOST", "192.168.1.224")
-INFOBLOX_USER = os.getenv("INFOBLOX_USER", "admin")
-INFOBLOX_PASSWORD = os.getenv("INFOBLOX_PASSWORD", "infoblox")
-WAPI_VERSION = os.getenv("WAPI_VERSION", "v2.13.1")
-BASE_URL = f"https://{INFOBLOX_HOST}/wapi/{WAPI_VERSION}"
+# Import security modules
+from config import get_settings
+from logging_config import setup_logging, get_security_logger, log_tool_execution
+from validators import InputValidator, ValidationError
+
+# Load secure configuration
+settings = get_settings()
+
+# Setup logging
+setup_logging(
+    log_level=settings.log_level,
+    log_file="infoblox-mcp-server.log",
+    enable_security_audit=True
+)
+
+logger = logging.getLogger(__name__)
+security_logger = get_security_logger()
+
+# Display SSL warning if disabled
+settings.display_security_warning()
+
+# Configuration
+BASE_URL = settings.get_infoblox_base_url()
 
 # Cache configuration
 CACHE_DIR = os.path.expanduser("~/.infoblox-mcp")
@@ -39,32 +57,53 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 
 
 class InfoBloxClient:
-    """Client for InfoBlox WAPI"""
+    """Client for InfoBlox WAPI with rate limiting and retry logic"""
 
     def __init__(self):
         self.session = requests.Session()
-        self.session.auth = (INFOBLOX_USER, INFOBLOX_PASSWORD)
-        self.session.verify = False
+        self.session.auth = (settings.infoblox_user, settings.infoblox_password)
+        self.session.verify = settings.get_ssl_verify()
         self.session.headers.update({
             "Content-Type": "application/json",
             "Accept": "application/json"
         })
+        logger.info(f"InfoBlox client initialized (host={settings.infoblox_host})")
 
+    @sleep_and_retry
+    @limits(calls=3, period=1)  # Rate limit: 3 requests per second
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((requests.exceptions.ConnectionError, requests.exceptions.Timeout)),
+        reraise=True
+    )
     def request(self, method: str, path: str, **kwargs) -> Dict[str, Any]:
-        """Make WAPI request"""
+        """Make WAPI request with rate limiting and retry logic"""
         url = f"{BASE_URL}/{path.lstrip('/')}"
         try:
+            logger.debug(f"InfoBlox API: {method} {path}")
             response = self.session.request(method, url, timeout=30, **kwargs)
             response.raise_for_status()
 
             # Handle empty responses
             if not response.text or response.text.strip() == "":
+                logger.info(f"InfoBlox API success: {method} {path}")
                 return {"success": True, "message": "Operation completed"}
 
-            return response.json()
+            result = response.json()
+            logger.info(f"InfoBlox API success: {method} {path}")
+            return result
         except requests.exceptions.HTTPError as e:
+            logger.error(f"InfoBlox API HTTP error: {e} (status={e.response.status_code})")
             return {"error": str(e), "status_code": e.response.status_code}
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"InfoBlox API connection error: {e}")
+            raise  # Let retry handle it
+        except requests.exceptions.Timeout as e:
+            logger.error(f"InfoBlox API timeout: {e}")
+            raise  # Let retry handle it
         except Exception as e:
+            logger.error(f"InfoBlox API unexpected error: {e}")
             return {"error": str(e)}
 
     def get(self, path: str, params: Optional[Dict] = None) -> Dict[str, Any]:
@@ -105,10 +144,12 @@ class SchemaManager:
 
     def discover_schemas(self) -> Dict[str, Any]:
         """Discover all WAPI object schemas"""
+        logger.info("Discovering InfoBlox WAPI objects...")
         print("Discovering InfoBlox WAPI objects...")
 
         # Load common object types
         object_types = self._get_common_objects()
+        logger.debug(f"Testing {len(object_types)} object types")
 
         discovered = {}
         for obj_type in object_types:
@@ -116,8 +157,10 @@ class SchemaManager:
                 schema = self.client.get_object_schema(obj_type)
                 if schema:
                     discovered[obj_type] = schema
+                    logger.debug(f"Discovered schema for: {obj_type}")
 
         self.schemas = discovered
+        logger.info(f"Schema discovery complete: {len(discovered)} objects found")
         return discovered
 
     def _get_common_objects(self) -> List[str]:
@@ -390,6 +433,9 @@ def initialize_tools():
     """Initialize tools from schemas"""
     global all_tools
 
+    logger.info("=" * 80)
+    logger.info("InfoBlox MCP Server Initialization")
+    logger.info("=" * 80)
     print("=" * 80)
     print("InfoBlox MCP Server Initialization")
     print("=" * 80)
@@ -398,34 +444,46 @@ def initialize_tools():
     cached_schemas = schema_manager.load_cached_schemas()
 
     if cached_schemas:
+        logger.info("Found cached schemas")
         print("✓ Found cached schemas")
         schemas = cached_schemas
     else:
+        logger.info("Discovering WAPI schemas...")
         print("Discovering WAPI schemas...")
         schemas = schema_manager.discover_schemas()
         schema_manager.save_schemas(schemas)
+        logger.info(f"Discovered {len(schemas)} object types")
         print(f"✓ Discovered {len(schemas)} object types")
 
     # Check if schemas changed (upgrade detection)
     if schema_manager.has_schema_changed(schemas):
+        logger.warning("Schema changes detected - regenerating tools")
         print("⚠ Schema changes detected - regenerating tools")
         # Re-discover to get latest
         schemas = schema_manager.discover_schemas()
         schema_manager.save_schemas(schemas)
 
     # Generate tools from schemas
+    logger.info("Generating MCP tools...")
     print("Generating MCP tools...")
     generated_tools = tool_generator.generate_tools(schemas)
+    logger.info(f"Generated {len(generated_tools)} tools from {len(schemas)} object types")
     print(f"✓ Generated {len(generated_tools)} tools from {len(schemas)} object types")
 
     # Load custom tools
     custom_tools = custom_tool_manager.load_custom_tools()
     if custom_tools:
+        logger.info(f"Loaded {len(custom_tools)} custom tools")
         print(f"✓ Loaded {len(custom_tools)} custom tools")
 
     # Combine all tools
     all_tools = generated_tools + custom_tools
 
+    logger.info("=" * 80)
+    logger.info(f"Server ready with {len(all_tools)} total tools")
+    logger.info(f"  - Auto-generated: {len(generated_tools)}")
+    logger.info(f"  - Custom tools: {len(custom_tools)}")
+    logger.info("=" * 80)
     print("=" * 80)
     print(f"Server ready with {len(all_tools)} total tools")
     print(f"  - Auto-generated: {len(generated_tools)}")
@@ -444,15 +502,34 @@ async def list_tools() -> List[Tool]:
 
 @app.call_tool()
 async def call_tool(name: str, arguments: Any) -> List[TextContent]:
-    """Execute a tool"""
+    """Execute a tool with input validation and security logging"""
     try:
+        # Log tool execution attempt
+        logger.info(f"Tool called: {name}")
+        security_logger.info(f"TOOL_EXECUTION_START - Tool: {name}, Args: {json.dumps(arguments, default=str)}")
+
+        # Validate tool name
+        try:
+            validated_name = InputValidator.validate_object_type(name)
+        except ValidationError as e:
+            logger.warning(f"Invalid tool name: {name} - {e}")
+            return [TextContent(type="text", text=json.dumps({"error": f"Invalid tool name: {e}"}))]
+
         # Parse tool name
         parts = name.split('_')
         if len(parts) < 3 or parts[0] != 'infoblox':
-            return [TextContent(type="text", text=json.dumps({"error": "Invalid tool name"}))]
+            logger.warning(f"Malformed tool name: {name}")
+            return [TextContent(type="text", text=json.dumps({"error": "Invalid tool name format"}))]
 
         operation = parts[1]  # list, get, create, update, delete, search
         object_type = '_'.join(parts[2:]).replace('_', ':')  # Convert back to InfoBlox format
+
+        # Validate object type
+        try:
+            validated_object_type = InputValidator.validate_object_type(object_type)
+        except ValidationError as e:
+            logger.warning(f"Invalid object type: {object_type} - {e}")
+            return [TextContent(type="text", text=json.dumps({"error": f"Invalid object type: {e}"}))]
 
         # Handle different operations
         result = None
@@ -462,16 +539,26 @@ async def call_tool(name: str, arguments: Any) -> List[TextContent]:
             return_fields = arguments.get('return_fields', '')
             search_fields = arguments.get('search_fields', {})
 
+            # Validate inputs
+            if max_results > 1000:
+                max_results = 1000  # Cap at reasonable limit
+                logger.warning(f"Max results capped at 1000")
+
             # Build query string
             params = {'_max_results': max_results}
             if return_fields:
                 params['_return_fields'] = return_fields
 
-            # Add search filters
+            # Add search filters with validation
             for field, value in search_fields.items():
-                params[field] = value
+                try:
+                    validated_value = InputValidator.validate_filter_value(value)
+                    params[field] = validated_value
+                except ValidationError as e:
+                    logger.warning(f"Invalid filter value for {field}: {e}")
+                    return [TextContent(type="text", text=json.dumps({"error": f"Invalid filter value: {e}"}))]
 
-            result = client.get(object_type, params=params)
+            result = client.get(validated_object_type, params=params)
 
         elif operation == "get":
             ref = arguments.get('ref')
@@ -511,11 +598,22 @@ async def call_tool(name: str, arguments: Any) -> List[TextContent]:
             result = client.get(object_type, params=params)
 
         else:
+            logger.warning(f"Unknown operation: {operation}")
             result = {"error": f"Unknown operation: {operation}"}
+
+        # Log successful execution
+        security_logger.info(f"TOOL_EXECUTION_SUCCESS - Tool: {name}, Result size: {len(json.dumps(result))}")
+        logger.info(f"Tool execution completed: {name}")
 
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
+    except ValidationError as e:
+        logger.error(f"Validation error in tool {name}: {e}")
+        security_logger.warning(f"TOOL_EXECUTION_FAILED - Tool: {name}, Reason: Validation error - {e}")
+        return [TextContent(type="text", text=json.dumps({"error": f"Validation error: {str(e)}"}))]
     except Exception as e:
+        logger.error(f"Unexpected error in tool {name}: {e}", exc_info=True)
+        security_logger.error(f"TOOL_EXECUTION_FAILED - Tool: {name}, Reason: {str(e)}")
         return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
 
 
@@ -585,11 +683,16 @@ infoblox_delete_network(ref="network/ZG5zLm5ldH...:10.0.0.0/24/default")
 
 async def main():
     """Run the MCP server"""
+    logger.info("Starting InfoBlox MCP Server")
+
     # Initialize tools before starting server
     initialize_tools()
 
+    logger.info("Server initialized, starting stdio transport...")
+
     # Run server with stdio transport
     async with stdio_server() as (read_stream, write_stream):
+        logger.info("Server running, waiting for requests...")
         await app.run(read_stream, write_stream, app.create_initialization_options())
 
 

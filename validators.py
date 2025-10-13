@@ -310,6 +310,55 @@ class InputValidator:
             raise ValidationError(f"Invalid URL: {e}")
 
     @classmethod
+    def validate_shell_command(cls, command: str) -> str:
+        """
+        Validate shell command for dangerous patterns.
+
+        Args:
+            command: Shell command to validate
+
+        Returns:
+            Validated command
+
+        Raises:
+            ValidationError: If command contains dangerous patterns
+
+        Example:
+            >>> InputValidator.validate_shell_command("ls -la")
+            'ls -la'
+        """
+        if not isinstance(command, str):
+            raise ValidationError(f"Command must be string, got {type(command)}")
+
+        if not command or not command.strip():
+            raise ValidationError("Command cannot be empty")
+
+        if len(command) > 1000:
+            raise ValidationError(f"Command too long: {len(command)} chars (max 1000)")
+
+        # Check for dangerous patterns
+        dangerous_patterns = [
+            (r'rm\s+-rf\s+/', "Dangerous recursive delete"),
+            (r'\bcurl\b.*\|\s*bash', "Dangerous curl pipe to bash"),
+            (r'\bwget\b.*\|\s*bash', "Dangerous wget pipe to bash"),
+            (r'eval\s*\(', "Dangerous eval"),
+            (r'exec\s*\(', "Dangerous exec"),
+            (r'__import__', "Dangerous import"),
+            (r'>\s*/dev/sd', "Dangerous write to disk"),
+            (r'dd\s+.*of=/dev/', "Dangerous dd command"),
+            (r'mkfs\.', "Dangerous filesystem format"),
+            (r':\(\)\{\s*:\|:&\s*\};:', "Fork bomb"),
+        ]
+
+        for pattern, description in dangerous_patterns:
+            if re.search(pattern, command, re.IGNORECASE):
+                logger.warning(f"Blocked dangerous command: {description}")
+                raise ValidationError(f"Command blocked: {description}")
+
+        logger.debug(f"Command validated: {command[:50]}...")
+        return command
+
+    @classmethod
     def validate_file_path(cls, path: str, allowed_base: str = None) -> str:
         """
         Validate file path to prevent directory traversal.

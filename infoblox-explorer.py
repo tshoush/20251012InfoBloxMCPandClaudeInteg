@@ -4,26 +4,41 @@ InfoBlox WAPI Explorer
 Discovers all available WAPI objects and their schemas
 """
 
+# Import security modules
+from config import get_settings
+from logging_config import setup_logging, get_security_logger
+from validators import InputValidator, ValidationError
+import logging
+
+# Load secure configuration
+settings = get_settings()
+
+# Setup logging
+setup_logging(
+    log_level=settings.log_level,
+    log_file="infoblox-explorer.log",
+    enable_security_audit=True
+)
+
+logger = logging.getLogger(__name__)
+security_logger = get_security_logger()
+
+# Display SSL warning if disabled
+settings.display_security_warning()
+
 import requests
 import json
-from urllib3.exceptions import InsecureRequestWarning
 from typing import Dict, List, Any
 
-# Suppress SSL warnings for self-signed certificates
-requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
-
-# InfoBlox configuration
-INFOBLOX_HOST = "192.168.1.224"
-INFOBLOX_USER = "admin"
-INFOBLOX_PASSWORD = "infoblox"
-WAPI_VERSION = "v2.13.1"
-BASE_URL = f"https://{INFOBLOX_HOST}/wapi/{WAPI_VERSION}"
+# InfoBlox configuration moved to config.py
+BASE_URL = settings.get_infoblox_base_url()
 
 def get_wapi_session():
     """Create authenticated session for WAPI"""
+    logger.info("Creating WAPI session")
     session = requests.Session()
-    session.auth = (INFOBLOX_USER, INFOBLOX_PASSWORD)
-    session.verify = False
+    session.auth = (settings.infoblox_user, settings.infoblox_password)
+    session.verify = settings.get_ssl_verify()
     return session
 
 def get_supported_objects(session):
@@ -72,11 +87,12 @@ def test_object_exists(session, object_type):
 
 def discover_wapi_objects(session):
     """Discover all available WAPI objects"""
+    logger.info("Starting WAPI object discovery")
     print("=" * 80)
     print("InfoBlox WAPI Object Discovery")
     print("=" * 80)
-    print(f"Host: {INFOBLOX_HOST}")
-    print(f"WAPI Version: {WAPI_VERSION}")
+    print(f"Host: {settings.infoblox_host}")
+    print(f"WAPI Version: {settings.wapi_version}")
     print("=" * 80)
     print()
 

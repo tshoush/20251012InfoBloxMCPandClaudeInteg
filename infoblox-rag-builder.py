@@ -4,6 +4,28 @@ InfoBlox RAG Knowledge Base Builder
 Creates a vector database from InfoBlox WAPI schemas and documentation
 """
 
+# Import security modules
+from config import get_settings
+from logging_config import setup_logging, get_security_logger
+from validators import InputValidator, ValidationError
+import logging
+
+# Load secure configuration
+settings = get_settings()
+
+# Setup logging
+setup_logging(
+    log_level=settings.log_level,
+    log_file="infoblox-rag-builder.log",
+    enable_security_audit=True
+)
+
+logger = logging.getLogger(__name__)
+security_logger = get_security_logger()
+
+# Display SSL warning if disabled
+settings.display_security_warning()
+
 import json
 import os
 import sys
@@ -25,11 +47,7 @@ try:
 except ImportError:
     WEB_SCRAPING_AVAILABLE = False
 
-# Configuration
-INFOBLOX_HOST = os.getenv("INFOBLOX_HOST", "192.168.1.224")
-INFOBLOX_USER = os.getenv("INFOBLOX_USER", "admin")
-INFOBLOX_PASSWORD = os.getenv("INFOBLOX_PASSWORD", "infoblox")
-WAPI_VERSION = os.getenv("WAPI_VERSION", "v2.13.1")
+# Configuration moved to config.py
 
 # RAG Configuration
 RAG_DB_PATH = os.path.expanduser("~/.infoblox-rag")
@@ -42,7 +60,10 @@ class InfoBloxRAGBuilder:
 
     def __init__(self):
         if not CHROMADB_AVAILABLE:
+            logger.error("ChromaDB is required but not available")
             raise ImportError("ChromaDB is required. Install with: pip install chromadb")
+
+        logger.info("Initializing InfoBloxRAGBuilder")
 
         # Initialize ChromaDB
         os.makedirs(RAG_DB_PATH, exist_ok=True)
@@ -55,12 +76,14 @@ class InfoBloxRAGBuilder:
         # Create or get collection
         try:
             self.collection = self.client.get_collection(name=COLLECTION_NAME)
+            logger.info(f"Loaded existing collection: {COLLECTION_NAME}")
             print(f"✓ Loaded existing collection: {COLLECTION_NAME}")
         except:
             self.collection = self.client.create_collection(
                 name=COLLECTION_NAME,
                 metadata={"description": "InfoBlox WAPI knowledge base"}
             )
+            logger.info(f"Created new collection: {COLLECTION_NAME}")
             print(f"✓ Created new collection: {COLLECTION_NAME}")
 
         self.documents = []
@@ -101,7 +124,7 @@ class InfoBloxRAGBuilder:
         - PUT: Update existing {object_type} objects
         - DELETE: Delete {object_type} objects
 
-        API Endpoint: https://<infoblox-host>/wapi/{WAPI_VERSION}/{object_type}
+        API Endpoint: https://<infoblox-host>/wapi/{settings.wapi_version}/{object_type}
         """
 
         self.documents.append(overview_doc)
@@ -163,7 +186,7 @@ class InfoBloxRAGBuilder:
         - Can be modified in PUT requests if not read-only
 
         Example:
-        GET /wapi/{WAPI_VERSION}/{object_type}?{name}=<value>&_return_fields={name}
+        GET /wapi/{settings.wapi_version}/{object_type}?{name}=<value>&_return_fields={name}
         """
 
         return doc
@@ -177,50 +200,50 @@ class InfoBloxRAGBuilder:
             Common use cases for {object_type}:
 
             1. List all networks:
-               GET /wapi/{WAPI_VERSION}/{object_type}?_return_fields=network,comment
+               GET /wapi/{settings.wapi_version}/{object_type}?_return_fields=network,comment
 
             2. Search for specific network:
-               GET /wapi/{WAPI_VERSION}/{object_type}?network=10.0.0.0/24
+               GET /wapi/{settings.wapi_version}/{object_type}?network=10.0.0.0/24
 
             3. Create new network:
-               POST /wapi/{WAPI_VERSION}/{object_type}
+               POST /wapi/{settings.wapi_version}/{object_type}
                {{"network": "10.50.0.0/24", "comment": "New network"}}
 
             4. Check network utilization:
-               GET /wapi/{WAPI_VERSION}/{object_type}?_return_fields=network,utilization
+               GET /wapi/{settings.wapi_version}/{object_type}?_return_fields=network,utilization
 
             5. Find networks with DHCP enabled:
-               GET /wapi/{WAPI_VERSION}/{object_type}?_return_fields=network,members
+               GET /wapi/{settings.wapi_version}/{object_type}?_return_fields=network,members
             """,
 
             "dns": f"""
             Common use cases for {object_type}:
 
             1. List DNS records:
-               GET /wapi/{WAPI_VERSION}/{object_type}?_return_fields=name,ipv4addr
+               GET /wapi/{settings.wapi_version}/{object_type}?_return_fields=name,ipv4addr
 
             2. Search by hostname:
-               GET /wapi/{WAPI_VERSION}/{object_type}?name~=server
+               GET /wapi/{settings.wapi_version}/{object_type}?name~=server
 
             3. Create DNS record:
-               POST /wapi/{WAPI_VERSION}/{object_type}
+               POST /wapi/{settings.wapi_version}/{object_type}
                {{"name": "server1.example.com", "ipv4addr": "10.0.0.50"}}
 
             4. Find all records in zone:
-               GET /wapi/{WAPI_VERSION}/{object_type}?zone=example.com
+               GET /wapi/{settings.wapi_version}/{object_type}?zone=example.com
             """,
 
             "dhcp": f"""
             Common use cases for {object_type}:
 
             1. List DHCP objects:
-               GET /wapi/{WAPI_VERSION}/{object_type}?_return_fields=address,hardware
+               GET /wapi/{settings.wapi_version}/{object_type}?_return_fields=address,hardware
 
             2. Find by MAC address:
-               GET /wapi/{WAPI_VERSION}/{object_type}?hardware=00:11:22:33:44:55
+               GET /wapi/{settings.wapi_version}/{object_type}?hardware=00:11:22:33:44:55
 
             3. Create DHCP reservation:
-               POST /wapi/{WAPI_VERSION}/{object_type}
+               POST /wapi/{settings.wapi_version}/{object_type}
                {{"ipv4addr": "10.0.0.100", "mac": "00:11:22:33:44:55"}}
             """,
 
@@ -228,10 +251,10 @@ class InfoBloxRAGBuilder:
             Common use cases for {object_type}:
 
             1. View configuration:
-               GET /wapi/{WAPI_VERSION}/{object_type}
+               GET /wapi/{settings.wapi_version}/{object_type}
 
             2. Update settings:
-               PUT /wapi/{WAPI_VERSION}/{object_type}/<ref>
+               PUT /wapi/{settings.wapi_version}/{object_type}/<ref>
                {{"setting": "value"}}
             """,
 
@@ -239,13 +262,13 @@ class InfoBloxRAGBuilder:
             Common operations for {object_type}:
 
             1. List objects:
-               GET /wapi/{WAPI_VERSION}/{object_type}
+               GET /wapi/{settings.wapi_version}/{object_type}
 
             2. Get specific object:
-               GET /wapi/{WAPI_VERSION}/{object_type}/<ref>
+               GET /wapi/{settings.wapi_version}/{object_type}/<ref>
 
             3. Create object:
-               POST /wapi/{WAPI_VERSION}/{object_type}
+               POST /wapi/{settings.wapi_version}/{object_type}
                {{"required_field": "value"}}
             """
         }
@@ -306,53 +329,59 @@ class InfoBloxRAGBuilder:
     def scrape_wapi_docs(self):
         """Scrape InfoBlox WAPI documentation if available"""
         if not WEB_SCRAPING_AVAILABLE:
+            logger.warning("Web scraping not available (missing requests/beautifulsoup4)")
             print("\n✗ Web scraping not available (missing requests/beautifulsoup4)")
             return
 
+        logger.info("Attempting to scrape WAPI documentation")
         print("\nAttempting to scrape WAPI documentation...")
 
         # Try to access wapidoc
-        doc_url = f"https://{INFOBLOX_HOST}/wapidoc/"
+        doc_url = f"https://{settings.infoblox_host}/wapidoc/"
 
         try:
             response = requests.get(
                 doc_url,
-                auth=(INFOBLOX_USER, INFOBLOX_PASSWORD),
-                verify=False,
+                auth=(settings.infoblox_user, settings.infoblox_password),
+                verify=settings.get_ssl_verify(),
                 timeout=10
             )
 
             if response.status_code == 200:
+                logger.info(f"Found WAPI documentation at {doc_url}")
                 print(f"✓ Found WAPI documentation at {doc_url}")
                 # Parse and extract documentation
                 # This is a placeholder - actual implementation depends on InfoBlox version
                 print("  (Documentation scraping not yet implemented)")
             else:
+                logger.warning(f"Cannot access documentation: HTTP {response.status_code}")
                 print(f"✗ Cannot access documentation: HTTP {response.status_code}")
 
         except Exception as e:
+            logger.error(f"Cannot access documentation: {e}", exc_info=True)
             print(f"✗ Cannot access documentation: {e}")
 
     def discover_extensible_attributes(self):
         """Discover extensible attributes (EAs) from InfoBlox"""
         print("\nDiscovering extensible attributes...")
+        logger.info("Discovering extensible attributes from InfoBlox")
 
         try:
             import requests
-            from requests.packages.urllib3.exceptions import InsecureRequestWarning
-            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-            url = f"https://{INFOBLOX_HOST}/wapi/{WAPI_VERSION}/extensibleattributedef"
+            url = f"https://{settings.infoblox_host}/wapi/{settings.wapi_version}/extensibleattributedef"
+            logger.debug(f"Fetching EAs from: {url}")
             response = requests.get(
                 url,
-                auth=(INFOBLOX_USER, INFOBLOX_PASSWORD),
-                verify=False,
+                auth=(settings.infoblox_user, settings.infoblox_password),
+                verify=settings.get_ssl_verify(),
                 params={"_return_fields": "name,comment,type,list_values"},
                 timeout=30
             )
 
             if response.status_code == 200:
                 eas = response.json()
+                logger.info(f"Discovered {len(eas)} extensible attributes")
                 print(f"✓ Discovered {len(eas)} extensible attributes")
 
                 # Add EA documentation
@@ -374,7 +403,7 @@ class InfoBloxRAGBuilder:
                     - Use _return_fields+ to include EAs in results
 
                     Query example:
-                    GET /wapi/{WAPI_VERSION}/network?*{ea_name}=<value>&_return_fields+=extattrs
+                    GET /wapi/{settings.wapi_version}/network?*{ea_name}=<value>&_return_fields+=extattrs
 
                     Example natural language queries:
                     - "List all networks where {ea_name} is <value>"
@@ -399,10 +428,12 @@ class InfoBloxRAGBuilder:
 
                 return len(eas)
             else:
+                logger.warning(f"Could not discover EAs: HTTP {response.status_code}")
                 print(f"✗ Could not discover EAs: HTTP {response.status_code}")
                 return 0
 
         except Exception as e:
+            logger.error(f"Error discovering EAs: {e}", exc_info=True)
             print(f"✗ Error discovering EAs: {e}")
             return 0
 
@@ -750,6 +781,7 @@ class InfoBloxRAGBuilder:
 
     def build_rag_database(self):
         """Build the RAG database"""
+        logger.info("Starting RAG database build")
         print("\n" + "=" * 80)
         print("Building InfoBlox RAG Knowledge Base")
         print("=" * 80)
@@ -784,10 +816,12 @@ class InfoBloxRAGBuilder:
                 )
                 print(f"  Added batch {i//batch_size + 1} ({end_idx}/{len(self.documents)})")
 
+            logger.info(f"RAG database built successfully - {len(self.documents)} documents")
             print(f"✓ RAG database built successfully")
             print(f"  Total documents: {len(self.documents)}")
             print(f"  Database location: {RAG_DB_PATH}")
         else:
+            logger.warning("No documents to add to RAG database")
             print("✗ No documents to add")
 
     def test_search(self, query: str, n_results: int = 5):
@@ -813,10 +847,12 @@ class InfoBloxRAGBuilder:
 
 
 def main():
+    logger.info("InfoBlox RAG Knowledge Base Builder started")
     print("InfoBlox RAG Knowledge Base Builder")
     print("=" * 80)
 
     if not CHROMADB_AVAILABLE:
+        logger.error("ChromaDB not installed")
         print("\n✗ ChromaDB not installed")
         print("  Install with: pip install chromadb")
         return 1
@@ -851,9 +887,11 @@ def main():
         print("\nThe RAG database can now be used with the DDI Assistant")
         print("for enhanced InfoBlox understanding and better responses.")
 
+        logger.info("RAG database builder completed successfully")
         return 0
 
     except Exception as e:
+        logger.error(f"Error building RAG database: {e}", exc_info=True)
         print(f"\n✗ Error: {e}")
         import traceback
         traceback.print_exc()

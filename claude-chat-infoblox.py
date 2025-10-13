@@ -1,6 +1,28 @@
 #!/usr/bin/env python
 """Interactive chat interface for Claude AI with InfoBlox WAPI integration"""
 
+# Import security modules
+from config import get_settings
+from logging_config import setup_logging, get_security_logger
+from validators import InputValidator, ValidationError
+import logging
+
+# Load secure configuration
+settings = get_settings()
+
+# Setup logging
+setup_logging(
+    log_level=settings.log_level,
+    log_file="claude-chat-infoblox.log",
+    enable_security_audit=True
+)
+
+logger = logging.getLogger(__name__)
+security_logger = get_security_logger()
+
+# Display SSL warning if disabled
+settings.display_security_warning()
+
 import os
 import sys
 import anthropic
@@ -10,10 +32,6 @@ from datetime import datetime
 import subprocess
 import glob
 import requests
-from urllib3.exceptions import InsecureRequestWarning
-
-# Suppress SSL warnings
-requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 try:
     from duckduckgo_search import DDGS
@@ -22,12 +40,8 @@ try:
 except ImportError:
     WEB_SEARCH_AVAILABLE = False
 
-# InfoBlox Configuration
-INFOBLOX_HOST = os.getenv("INFOBLOX_HOST", "192.168.1.224")
-INFOBLOX_USER = os.getenv("INFOBLOX_USER", "admin")
-INFOBLOX_PASSWORD = os.getenv("INFOBLOX_PASSWORD", "infoblox")
-WAPI_VERSION = os.getenv("WAPI_VERSION", "v2.13.1")
-BASE_URL = f"https://{INFOBLOX_HOST}/wapi/{WAPI_VERSION}"
+# InfoBlox Configuration moved to config.py
+BASE_URL = settings.get_infoblox_base_url()
 
 # ANSI color codes (same as before)
 class Colors:
@@ -56,9 +70,10 @@ class InfoBloxClient:
     """Client for InfoBlox WAPI"""
 
     def __init__(self):
+        logger.info("Initializing InfoBloxClient")
         self.session = requests.Session()
-        self.session.auth = (INFOBLOX_USER, INFOBLOX_PASSWORD)
-        self.session.verify = False
+        self.session.auth = (settings.infoblox_user, settings.infoblox_password)
+        self.session.verify = settings.get_ssl_verify()
         self.session.headers.update({
             "Content-Type": "application/json",
             "Accept": "application/json"
@@ -68,15 +83,20 @@ class InfoBloxClient:
         """Make WAPI request"""
         url = f"{BASE_URL}/{path.lstrip('/')}"
         try:
+            logger.debug(f"InfoBlox API: {method} {path}")
             response = self.session.request(method, url, timeout=30, **kwargs)
             if response.status_code >= 400:
+                logger.warning(f"InfoBlox API error: HTTP {response.status_code}")
                 return {"error": f"HTTP {response.status_code}", "details": response.text}
 
             if not response.text or response.text.strip() == "":
+                logger.info(f"InfoBlox API success: {method} {path}")
                 return {"success": True, "message": "Operation completed successfully"}
 
+            logger.info(f"InfoBlox API success: {method} {path}")
             return response.json()
         except Exception as e:
+            logger.error(f"InfoBlox API error: {e}", exc_info=True)
             return {"error": str(e)}
 
 
@@ -147,9 +167,18 @@ def get_current_datetime():
 
 def execute_simple_command(command):
     try:
+        # Validate command to prevent injection
+        try:
+            InputValidator.validate_shell_command(command)
+        except ValidationError as e:
+            logger.warning(f"Command validation failed: {e}")
+            return f"Error: Invalid command - {e}"
+
+        logger.info(f"Executing command: {command}")
         result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=10)
         return result.stdout + result.stderr
     except Exception as e:
+        logger.error(f"Command execution error: {e}", exc_info=True)
         return f"Error: {e}"
 
 
@@ -260,6 +289,9 @@ def infoblox_generic_query(object_type, filters=None, max_results=100):
 
 def process_tool_call(tool_name, tool_input):
     """Process tool calls"""
+    logger.info(f"Tool called: {tool_name}")
+    security_logger.info(f"TOOL_EXECUTION - Tool: {tool_name}, Input: {json.dumps(tool_input, default=str)}")
+
     # InfoBlox tools
     if tool_name == "infoblox_list_networks":
         return infoblox_list_networks(
@@ -436,8 +468,10 @@ def get_all_tools():
 
 
 def main():
-    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    logger.info("Starting Claude Chat InfoBlox interface")
+    api_key = settings.anthropic_api_key
     if not api_key:
+        logger.error("ANTHROPIC_API_KEY not set")
         print(f"{Colors.BRIGHT_RED}ANTHROPIC_API_KEY not set{Colors.RESET}")
         sys.exit(1)
 

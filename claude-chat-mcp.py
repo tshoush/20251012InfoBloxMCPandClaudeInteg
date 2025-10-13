@@ -1,6 +1,28 @@
 #!/usr/bin/env python
 """Interactive chat interface for Claude AI with MCP server support"""
 
+# Import security modules
+from config import get_settings
+from logging_config import setup_logging, get_security_logger
+from validators import InputValidator, ValidationError
+import logging
+
+# Load secure configuration
+settings = get_settings()
+
+# Setup logging
+setup_logging(
+    log_level=settings.log_level,
+    log_file="claude-chat-mcp.log",
+    enable_security_audit=True
+)
+
+logger = logging.getLogger(__name__)
+security_logger = get_security_logger()
+
+# Display SSL warning if disabled
+settings.display_security_warning()
+
 import os
 import sys
 import anthropic
@@ -199,6 +221,14 @@ def get_current_datetime():
 def execute_simple_command(command):
     """Execute a simple shell command"""
     try:
+        # Validate command to prevent injection
+        try:
+            InputValidator.validate_shell_command(command)
+        except ValidationError as e:
+            logger.warning(f"Command validation failed: {e}")
+            return f"Error: Invalid command - {e}"
+
+        logger.info(f"Executing command: {command}")
         result = subprocess.run(
             command,
             shell=True,
@@ -208,6 +238,7 @@ def execute_simple_command(command):
         )
         return result.stdout + result.stderr
     except Exception as e:
+        logger.error(f"Command execution error: {e}", exc_info=True)
         return f"Error: {e}"
 
 
@@ -275,6 +306,9 @@ def read_file_content(file_path):
 
 def process_tool_call(tool_name, tool_input, mcp_manager=None):
     """Process tool calls - both built-in and MCP tools"""
+    logger.info(f"Tool called: {tool_name}")
+    security_logger.info(f"TOOL_EXECUTION - Tool: {tool_name}, Input: {json.dumps(tool_input, default=str)}")
+
     # Check if it's an MCP tool
     if mcp_manager and tool_name.startswith('infoblox_'):
         # Find which server has this tool
@@ -387,9 +421,11 @@ def get_builtin_tools():
 
 async def initialize_mcp_servers():
     """Initialize MCP server connections"""
+    logger.info("Initializing MCP server connections")
     mcp_manager = MCPServerManager()
 
     if not MCP_AVAILABLE:
+        logger.warning("MCP not available")
         return mcp_manager
 
     print(f"{Colors.BRIGHT_CYAN}Initializing MCP servers...{Colors.RESET}")
@@ -409,9 +445,11 @@ async def initialize_mcp_servers():
 
 def main():
     """Main function"""
-    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    logger.info("Starting Claude Chat MCP interface")
+    api_key = settings.anthropic_api_key
 
     if not api_key:
+        logger.error("ANTHROPIC_API_KEY not set")
         print(f"{Colors.BRIGHT_RED}ANTHROPIC_API_KEY not set{Colors.RESET}")
         sys.exit(1)
 
