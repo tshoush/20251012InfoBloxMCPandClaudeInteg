@@ -29,8 +29,43 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 - **InfoBlox MCP Server** - Model Context Protocol server exposing 140+ InfoBlox WAPI endpoints
 - **Claude Chat Interfaces** - Multiple chat interfaces with different capabilities
+- **API Confirmation System** - User-controlled API execution with preview & edit capability (NEW!)
 - **RAG System** - Vector database for InfoBlox documentation
 - **Security Framework** - Comprehensive security modules (Phase 1 & 2 complete)
+
+### API Confirmation System (NEW!) ✨
+
+Before any InfoBlox API call executes, users see:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 🔍 API Call Preview                                          │
+├─────────────────────────────────────────────────────────────┤
+│ List networks from InfoBlox                                  │
+│                                                              │
+│ Method:     GET                                              │
+│ Endpoint:   /wapi/v2.13.1/network                           │
+│ Username:   admin                                            │
+│ Parameters:                                                  │
+│   • _max_results: 100                                       │
+│                                                              │
+│ Curl Equivalent:                                            │
+│ curl -X GET -u admin:$INFOBLOX_PASSWORD \                   │
+│   'https://192.168.1.224/wapi/v2.13.1/network?...'          │
+└─────────────────────────────────────────────────────────────┘
+
+Execute? (yes/no/edit) [yes]:
+```
+
+**Features:**
+- ✅ **Full visibility** - See exact API call before execution
+- ✅ **Edit capability** - Modify parameters and username
+- ✅ **Cancel anytime** - Abort unwanted operations
+- ✅ **Curl equivalent** - Copy/paste for manual execution
+- ✅ **Security** - Password never displayed (shows $INFOBLOX_PASSWORD)
+- ✅ **Best-effort parsing** - Extracts values from natural language prompts
+
+See [API-CONFIRMATION-GUIDE.md](API-CONFIRMATION-GUIDE.md) for complete documentation.
 
 ### Security Features (Phase 1 & 2) ✅
 
@@ -144,6 +179,7 @@ See [MCP-SETUP-GUIDE.md](MCP-SETUP-GUIDE.md) for details.
 
 ### Getting Started
 - [MCP-SETUP-GUIDE.md](MCP-SETUP-GUIDE.md) - **Automatic MCP setup** (NEW!)
+- [API-CONFIRMATION-GUIDE.md](API-CONFIRMATION-GUIDE.md) - **API confirmation system** (NEW!)
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide with Python version options
 - [DDI-ASSISTANT-GUIDE.md](DDI-ASSISTANT-GUIDE.md) - Using the DDI Assistant
 - [RAG-SYSTEM-GUIDE.md](RAG-SYSTEM-GUIDE.md) - RAG system overview

@@ -5,6 +5,7 @@
 from config import get_settings
 from logging_config import setup_logging, get_security_logger
 from validators import InputValidator, ValidationError
+from api_confirmation import api_confirmation
 import logging
 
 # Load secure configuration
@@ -305,12 +306,26 @@ def read_file_content(file_path):
 
 
 def process_tool_call(tool_name, tool_input, mcp_manager=None):
-    """Process tool calls - both built-in and MCP tools"""
+    """Process tool calls - both built-in and MCP tools with confirmation for InfoBlox"""
     logger.info(f"Tool called: {tool_name}")
     security_logger.info(f"TOOL_EXECUTION - Tool: {tool_name}, Input: {json.dumps(tool_input, default=str)}")
 
-    # Check if it's an MCP tool
+    # Check if it's an InfoBlox MCP tool - require confirmation
     if mcp_manager and tool_name.startswith('infoblox_'):
+        # Show API preview and get user confirmation
+        should_execute, final_input, username = api_confirmation.confirm_api_call(tool_name, tool_input)
+
+        if not should_execute:
+            return {"cancelled": True, "message": "API call cancelled by user"}
+
+        # Use modified input from confirmation
+        tool_input = final_input
+
+        # Note: Username change for MCP tools would require updating MCP server env
+        # For now, log warning if username was changed
+        if username and username != settings.infoblox_user:
+            logger.warning(f"Username change requested but not supported for MCP tools: {username}")
+
         # Find which server has this tool
         for server_name, tools in mcp_manager.server_tools.items():
             if any(t.name == tool_name for t in tools):
@@ -322,7 +337,7 @@ def process_tool_call(tool_name, tool_input, mcp_manager=None):
                 return result
         return {"error": "MCP tool not found"}
 
-    # Built-in tools
+    # Built-in tools - execute immediately (no confirmation needed)
     if tool_name == "get_current_datetime":
         return get_current_datetime()
     elif tool_name == "execute_command":

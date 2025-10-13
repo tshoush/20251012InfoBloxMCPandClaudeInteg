@@ -5,6 +5,7 @@
 from config import get_settings
 from logging_config import setup_logging, get_security_logger
 from validators import InputValidator, ValidationError
+from api_confirmation import api_confirmation
 import logging
 
 # Load secure configuration
@@ -288,11 +289,31 @@ def infoblox_generic_query(object_type, filters=None, max_results=100):
 
 
 def process_tool_call(tool_name, tool_input):
-    """Process tool calls"""
+    """Process tool calls with user confirmation for InfoBlox APIs"""
     logger.info(f"Tool called: {tool_name}")
     security_logger.info(f"TOOL_EXECUTION - Tool: {tool_name}, Input: {json.dumps(tool_input, default=str)}")
 
-    # InfoBlox tools
+    # Check if this is an InfoBlox tool - require confirmation
+    infoblox_tools = [
+        "infoblox_list_networks", "infoblox_get_network", "infoblox_create_network",
+        "infoblox_search_records", "infoblox_list_dhcp_leases", "infoblox_query"
+    ]
+
+    if tool_name in infoblox_tools:
+        # Show API preview and get user confirmation
+        should_execute, final_input, username = api_confirmation.confirm_api_call(tool_name, tool_input)
+
+        if not should_execute:
+            return {"cancelled": True, "message": "API call cancelled by user"}
+
+        # Use modified input from confirmation
+        tool_input = final_input
+
+        # Update InfoBlox client username if changed
+        if username:
+            infoblox_client.session.auth = (username, settings.infoblox_password)
+
+    # InfoBlox tools - execute after confirmation
     if tool_name == "infoblox_list_networks":
         return infoblox_list_networks(
             tool_input.get("max_results", 100),
@@ -312,7 +333,7 @@ def process_tool_call(tool_name, tool_input):
     elif tool_name == "infoblox_query":
         return infoblox_generic_query(**tool_input)
 
-    # Built-in tools
+    # Built-in tools - execute immediately (no confirmation needed)
     elif tool_name == "get_current_datetime":
         return get_current_datetime()
     elif tool_name == "execute_command":
