@@ -1,0 +1,108 @@
+═══════════════════════════════════════════════════════════════════════
+  RedHat 7.9 Testing - Copy/Paste Commands
+═══════════════════════════════════════════════════════════════════════
+
+STEP 1: Transfer Package (Run on Mac)
+─────────────────────────────────────────────────────────────────────
+scp /Users/tshoush/REDHAT/redhat-deployment-20251012-204302.tar.gz tshoush@192.168.1.200:~/
+
+
+STEP 2: SSH to RedHat (Run on Mac)
+─────────────────────────────────────────────────────────────────────
+ssh tshoush@192.168.1.200
+
+
+STEP 3: Extract Package (Run on RedHat)
+─────────────────────────────────────────────────────────────────────
+mkdir -p ~/REDHAT && cd ~/REDHAT && tar -xzf ~/redhat-deployment-20251012-204302.tar.gz && ls -la
+
+
+STEP 4: Check Python (Run on RedHat)
+─────────────────────────────────────────────────────────────────────
+python3 --version
+
+
+If Python 3.9 not found, install it:
+─────────────────────────────────────────────────────────────────────
+sudo yum install -y epel-release && sudo yum install -y python39 && python3.9 --version
+
+
+STEP 5: Run Setup (Run on RedHat)
+─────────────────────────────────────────────────────────────────────
+cd ~/REDHAT && chmod +x setup-redhat.sh && ./setup-redhat.sh
+
+
+STEP 6: Create Test Configuration (Run on RedHat)
+─────────────────────────────────────────────────────────────────────
+cat > ~/REDHAT/.env << 'EOF'
+INFOBLOX_HOST=test.infoblox.local
+INFOBLOX_USER=testuser
+INFOBLOX_PASSWORD=testpass
+ANTHROPIC_API_KEY=sk-test-key-12345
+WAPI_VERSION=v2.13.1
+INFOBLOX_VERIFY_SSL=false
+RAG_DB_PATH=~/.infoblox-rag
+LOG_LEVEL=INFO
+EOF
+
+
+STEP 7: Run Tests (Run on RedHat)
+─────────────────────────────────────────────────────────────────────
+cd ~/REDHAT && source venv/bin/activate && chmod +x run-tests.sh && ./run-tests.sh
+
+
+═══════════════════════════════════════════════════════════════════════
+  ALTERNATIVE: Automated Quick Start
+═══════════════════════════════════════════════════════════════════════
+
+Transfer both files from Mac:
+─────────────────────────────────────────────────────────────────────
+scp /Users/tshoush/REDHAT/redhat-deployment-20251012-204302.tar.gz tshoush@192.168.1.200:~/
+scp /Users/tshoush/REDHAT/QUICK-START-REDHAT79.sh tshoush@192.168.1.200:~/
+
+SSH to RedHat and run:
+─────────────────────────────────────────────────────────────────────
+ssh tshoush@192.168.1.200
+chmod +x ~/QUICK-START-REDHAT79.sh && bash ~/QUICK-START-REDHAT79.sh
+
+
+═══════════════════════════════════════════════════════════════════════
+  Expected Output (Success)
+═══════════════════════════════════════════════════════════════════════
+
+========================= test session starts ==========================
+collected 83 items
+
+tests/test_config.py ............................          [  33%]
+tests/test_validators.py ................................................  [ 100%]
+
+========================= 83 passed in 0.xx s ==========================
+
+Coverage:
+  config.py         87%
+  validators.py     74%
+
+
+═══════════════════════════════════════════════════════════════════════
+  Troubleshooting
+═══════════════════════════════════════════════════════════════════════
+
+If tests fail, check:
+─────────────────────────────────────────────────────────────────────
+1. Python version: python3 --version (must be 3.9+)
+2. Virtual env: ls -la ~/REDHAT/venv
+3. .env file: cat ~/REDHAT/.env
+4. Permissions: ls -la ~/REDHAT/*.sh
+
+
+View detailed logs:
+─────────────────────────────────────────────────────────────────────
+cd ~/REDHAT && source venv/bin/activate && pytest tests/ -vv
+
+
+Re-run setup if needed:
+─────────────────────────────────────────────────────────────────────
+cd ~/REDHAT && rm -rf venv && ./setup-redhat.sh
+
+
+═══════════════════════════════════════════════════════════════════════
