@@ -9,8 +9,6 @@ import re
 from typing import Dict, Any, Optional, Tuple
 from config import get_settings
 
-settings = get_settings()
-
 # ANSI colors
 class Colors:
     RESET = '\033[0m'
