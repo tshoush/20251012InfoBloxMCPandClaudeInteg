@@ -327,6 +327,10 @@ Examples:
     parser.add_argument('--config', default='deploy-config.ini',
                        help='Configuration file (default: deploy-config.ini)')
 
+    # MCP setup
+    parser.add_argument('--setup-mcp', action='store_true',
+                       help='Configure MCP server in Claude Desktop after deployment')
+
     args = parser.parse_args()
 
     # Create deployment manager
@@ -360,6 +364,27 @@ Examples:
     # Execute deployment
     if args.local:
         success = deployer.deploy_local(args.python_version)
+
+        # Setup MCP if requested and deployment succeeded
+        if success and args.setup_mcp:
+            print("\n" + "="*80)
+            print("CONFIGURING MCP SERVER")
+            print("="*80)
+            try:
+                import subprocess
+                result = subprocess.run(
+                    [sys.executable, "setup-mcp.py", "--yes"],
+                    cwd=str(Path(__file__).parent)
+                )
+                if result.returncode == 0:
+                    print("\n✓ MCP server configured successfully!")
+                else:
+                    print("\n⚠ MCP setup had issues - you may need to run manually:")
+                    print("  ./setup-mcp.py")
+            except Exception as e:
+                print(f"\n⚠ Could not run MCP setup: {e}")
+                print("Run manually: ./setup-mcp.py")
+
         return 0 if success else 1
     elif args.remote:
         print("Remote deployment not yet implemented")

@@ -9,12 +9,19 @@ Enterprise-grade InfoBlox DDI management with Claude AI integration, featuring c
 git clone https://github.com/tshoush/20251012InfoBloxMCPandClaudeInteg.git
 cd 20251012InfoBloxMCPandClaudeInteg
 
-# Deploy with default Python 3.8.13 (recommended for RHEL 7.9)
-./deploy.py --local
+# Set environment variables
+export INFOBLOX_HOST="192.168.1.224"
+export INFOBLOX_USER="admin"
+export INFOBLOX_PASSWORD="your-password"
+export ANTHROPIC_API_KEY="sk-ant-..."
 
-# Or specify Python version
-./deploy.py --local --python-version 3.11
+# Deploy + Auto-configure MCP server in Claude Desktop (recommended)
+./deploy.py --local --setup-mcp
+
+# Restart Claude Desktop - MCP server auto-attached! 🔌
 ```
+
+**That's it!** The MCP server is automatically configured - no manual setup required.
 
 ## 📋 What's Included
 
@@ -111,9 +118,32 @@ python infoblox-explorer.py
 python infoblox-mcp-server.py
 ```
 
+## 🔌 MCP Server - Automatic Setup
+
+**Zero manual configuration required!**
+
+```bash
+# Automatically configure MCP server in Claude Desktop
+./setup-mcp.py
+
+# Or combined with deployment
+./deploy.py --local --setup-mcp
+```
+
+The script automatically:
+- ✅ Detects Claude Desktop installation
+- ✅ Configures InfoBlox MCP server
+- ✅ Sets up environment variables
+- ✅ Tests connection
+
+**Result:** InfoBlox MCP server appears in Claude Desktop's 🔌 menu - no manual config needed!
+
+See [MCP-SETUP-GUIDE.md](MCP-SETUP-GUIDE.md) for details.
+
 ## 📚 Documentation
 
 ### Getting Started
+- [MCP-SETUP-GUIDE.md](MCP-SETUP-GUIDE.md) - **Automatic MCP setup** (NEW!)
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide with Python version options
 - [DDI-ASSISTANT-GUIDE.md](DDI-ASSISTANT-GUIDE.md) - Using the DDI Assistant
 - [RAG-SYSTEM-GUIDE.md](RAG-SYSTEM-GUIDE.md) - RAG system overview
