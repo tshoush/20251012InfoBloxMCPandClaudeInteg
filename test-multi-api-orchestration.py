@@ -64,8 +64,24 @@ def check_environment():
         exists = os.path.exists(file)
         results.append(print_result(exists, f"File exists: {file}"))
 
-    # Check environment variables
+    # Check environment variables - if missing, prompt for them
     env_vars = ['INFOBLOX_HOST', 'INFOBLOX_USER', 'INFOBLOX_PASSWORD', 'ANTHROPIC_API_KEY']
+    missing_vars = [var for var in env_vars if not os.environ.get(var)]
+
+    if missing_vars:
+        print(f"\n{Colors.YELLOW}Missing environment variables: {', '.join(missing_vars)}{Colors.RESET}")
+        print(f"{Colors.CYAN}Using interactive configuration...{Colors.RESET}\n")
+
+        try:
+            from interactive_config import check_and_prompt_if_needed
+            check_and_prompt_if_needed()
+            print(f"\n{Colors.GREEN}✓ Configuration completed{Colors.RESET}\n")
+        except Exception as e:
+            print(f"{Colors.RED}✗ Configuration failed: {e}{Colors.RESET}")
+            results.append(print_result(False, "Interactive configuration"))
+            return False
+
+    # Verify all variables are now set
     for var in env_vars:
         exists = os.environ.get(var) is not None
         value = "***" if exists else "NOT SET"
