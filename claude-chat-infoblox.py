@@ -303,7 +303,8 @@ def process_tool_call(tool_name, tool_input):
     # Check if this is an InfoBlox tool - require confirmation
     infoblox_tools = [
         "infoblox_list_networks", "infoblox_get_network", "infoblox_create_network",
-        "infoblox_search_records", "infoblox_list_dhcp_leases", "infoblox_query"
+        "infoblox_search_records", "infoblox_list_dhcp_leases", "infoblox_query",
+        "infoblox_find_network_detailed"
     ]
 
     if tool_name in infoblox_tools:
@@ -339,6 +340,12 @@ def process_tool_call(tool_name, tool_input):
         return infoblox_list_dhcp_leases(**tool_input)
     elif tool_name == "infoblox_query":
         return infoblox_generic_query(**tool_input)
+    elif tool_name == "infoblox_find_network_detailed":
+        from network_info import NetworkInfoClient
+        client = NetworkInfoClient()
+        result = client.find_network_detailed(tool_input.get("network"))
+        # Return formatted output
+        return {"output": client.format_output(result), "raw_data": result}
 
     # Built-in tools - execute immediately (no confirmation needed)
     elif tool_name == "get_current_datetime":
@@ -490,6 +497,17 @@ def get_all_tools():
                     "max_results": {"type": "integer", "default": 100}
                 },
                 "required": ["object_type"]
+            }
+        },
+        {
+            "name": "infoblox_find_network_detailed",
+            "description": "Find network with comprehensive details for operations teams. Returns network info, container, extensible attributes, IP statistics (total/used/free), gateway, DHCP config. Use this for 'find network' or 'show network details' queries.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "network": {"type": "string", "description": "Network in CIDR notation (e.g., 192.168.1.0/24)"}
+                },
+                "required": ["network"]
             }
         }
     ]

@@ -293,6 +293,7 @@ See [ARCHITECTURE-FLOW.md](ARCHITECTURE-FLOW.md) for complete technical details.
 
 ### Getting Started
 - [demo.html](demo.html) - **Interactive presentation** - Open in browser! (NEW! 🌟)
+- [USE-CASES.md](USE-CASES.md) - **Operations use cases** - Real-world workflows (NEW! 🌟)
 - [ARCHITECTURE-FLOW.md](ARCHITECTURE-FLOW.md) - **How everything works together** (NEW! 🌟)
 - [MCP-SETUP-GUIDE.md](MCP-SETUP-GUIDE.md) - **Automatic MCP setup** (NEW!)
 - [API-CONFIRMATION-GUIDE.md](API-CONFIRMATION-GUIDE.md) - **API confirmation system** (NEW!)
