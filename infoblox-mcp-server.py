@@ -476,18 +476,69 @@ def initialize_tools():
         logger.info(f"Loaded {len(custom_tools)} custom tools")
         print(f"✓ Loaded {len(custom_tools)} custom tools")
 
+    # Add use case tools (operations-focused comprehensive lookups)
+    use_case_tools = [
+        Tool(
+            name="infoblox_find_network_detailed",
+            description="Find network with comprehensive details for operations teams. Returns network info, container, extensible attributes, IP statistics (total/used/free), gateway, DHCP config. Use this for 'find network' or 'show network details' queries.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "network": {
+                        "type": "string",
+                        "description": "Network in CIDR notation (e.g., 192.168.1.0/24)"
+                    }
+                },
+                "required": ["network"]
+            }
+        ),
+        Tool(
+            name="infoblox_find_ip_detailed",
+            description="Find IP address with comprehensive details for operations teams. Returns allocation status (fixed/DHCP/available), MAC address, hostname, network info, DNS records (A/PTR with last queried time), DHCP status. Use for 'find IP' or 'show IP details' queries.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "ip_address": {
+                        "type": "string",
+                        "description": "IP address (e.g., 192.168.1.50)"
+                    }
+                },
+                "required": ["ip_address"]
+            }
+        ),
+        Tool(
+            name="infoblox_find_zone_detailed",
+            description="Find DNS zone with comprehensive details for operations teams. Returns zone type, NS group with name servers, subzones list, SOA configuration, record statistics by type, extensible attributes. Use for 'find zone' or 'show zone details' queries.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "zone_name": {
+                        "type": "string",
+                        "description": "Zone FQDN (e.g., corp.local or example.com)"
+                    }
+                },
+                "required": ["zone_name"]
+            }
+        )
+    ]
+
+    logger.info(f"Added {len(use_case_tools)} use case tools")
+    print(f"✓ Added {len(use_case_tools)} use case tools")
+
     # Combine all tools
-    all_tools = generated_tools + custom_tools
+    all_tools = generated_tools + custom_tools + use_case_tools
 
     logger.info("=" * 80)
     logger.info(f"Server ready with {len(all_tools)} total tools")
     logger.info(f"  - Auto-generated: {len(generated_tools)}")
     logger.info(f"  - Custom tools: {len(custom_tools)}")
+    logger.info(f"  - Use case tools: {len(use_case_tools)}")
     logger.info("=" * 80)
     print("=" * 80)
     print(f"Server ready with {len(all_tools)} total tools")
     print(f"  - Auto-generated: {len(generated_tools)}")
     print(f"  - Custom tools: {len(custom_tools)}")
+    print(f"  - Use case tools: {len(use_case_tools)}")
     print("=" * 80)
     print()
 
@@ -508,14 +559,39 @@ async def call_tool(name: str, arguments: Any) -> List[TextContent]:
         logger.info(f"Tool called: {name}")
         security_logger.info(f"TOOL_EXECUTION_START - Tool: {name}, Args: {json.dumps(arguments, default=str)}")
 
-        # Validate tool name
+        # Handle use case tools (special comprehensive lookup tools)
+        if name == "infoblox_find_network_detailed":
+            from network_info import NetworkInfoClient
+            client_obj = NetworkInfoClient()
+            result = client_obj.find_network_detailed(arguments.get("network"))
+            output = client_obj.format_output(result)
+            security_logger.info(f"TOOL_EXECUTION_SUCCESS - Tool: {name}")
+            return [TextContent(type="text", text=output)]
+
+        elif name == "infoblox_find_ip_detailed":
+            from ip_info import IPInfoClient
+            client_obj = IPInfoClient()
+            result = client_obj.find_ip_detailed(arguments.get("ip_address"))
+            output = client_obj.format_output(result)
+            security_logger.info(f"TOOL_EXECUTION_SUCCESS - Tool: {name}")
+            return [TextContent(type="text", text=output)]
+
+        elif name == "infoblox_find_zone_detailed":
+            from zone_info import ZoneInfoClient
+            client_obj = ZoneInfoClient()
+            result = client_obj.find_zone_detailed(arguments.get("zone_name"))
+            output = client_obj.format_output(result)
+            security_logger.info(f"TOOL_EXECUTION_SUCCESS - Tool: {name}")
+            return [TextContent(type="text", text=output)]
+
+        # Validate tool name for standard tools
         try:
             validated_name = InputValidator.validate_object_type(name)
         except ValidationError as e:
             logger.warning(f"Invalid tool name: {name} - {e}")
             return [TextContent(type="text", text=json.dumps({"error": f"Invalid tool name: {e}"}))]
 
-        # Parse tool name
+        # Parse tool name for standard tools
         parts = name.split('_')
         if len(parts) < 3 or parts[0] != 'infoblox':
             logger.warning(f"Malformed tool name: {name}")
