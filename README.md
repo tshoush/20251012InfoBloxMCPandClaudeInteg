@@ -4,41 +4,54 @@ Enterprise-grade InfoBlox DDI management with Claude AI integration, featuring c
 
 ## 🚀 Quick Start
 
-### Option 1: Interactive Setup (Easiest) 🆕
+### One Command Setup (Recommended) 🌟
 
 ```bash
 # Clone the repository
 git clone https://github.com/tshoush/20251012InfoBloxMCPandClaudeInteg.git
 cd 20251012InfoBloxMCPandClaudeInteg
 
-# Just run any chat interface - it will prompt for configuration!
-python claude-chat-rag.py
+# Run master setup script - does everything!
+./setup.py
 ```
 
-**That's it!** The script will interactively prompt for:
-- InfoBlox hostname, username, password
-- Claude API key
-- Optional settings (WAPI version, SSL verification, log level)
+**That's it!** The master setup script will:
+- ✅ Guide you through configuration (InfoBlox + Claude credentials)
+- ✅ Create Python virtual environment
+- ✅ Install all dependencies
+- ✅ Configure MCP server in Claude Desktop (macOS only)
+- ✅ Build RAG knowledge base (optional)
+- ✅ Run tests to verify installation
+- ✅ Save configuration to .env file
 
-Then offers to save everything to a `.env` file. **Zero manual configuration!**
+**Total setup time: 3-5 minutes**
 
-### Option 2: Manual Setup (Traditional)
+### Quick Options
 
 ```bash
-# Clone the repository
-git clone https://github.com/tshoush/20251012InfoBloxMCPandClaudeInteg.git
-cd 20251012InfoBloxMCPandClaudeInteg
+# Quick setup (skip optional components)
+./setup.py --quick
 
-# Set environment variables
-export INFOBLOX_HOST="192.168.1.224"
-export INFOBLOX_USER="admin"
-export INFOBLOX_PASSWORD="your-password"
-export ANTHROPIC_API_KEY="sk-ant-..."
+# Setup without tests
+./setup.py --no-tests
 
-# Deploy + Auto-configure MCP server in Claude Desktop
-./deploy.py --local --setup-mcp
+# Setup without MCP server (for RHEL/Linux)
+./setup.py --no-mcp
+```
 
-# Restart Claude Desktop - MCP server auto-attached! 🔌
+### Manual Setup (Alternative)
+
+If you prefer manual control:
+
+```bash
+# 1. Configure credentials
+python claude-chat-rag.py  # Will prompt for configuration
+
+# 2. (Optional) Set up MCP server for Claude Desktop
+./setup-mcp.py
+
+# 3. (Optional) Build RAG knowledge base
+python infoblox-rag-builder.py
 ```
 
 ## 📋 What's Included
@@ -234,9 +247,38 @@ The script automatically:
 
 See [MCP-SETUP-GUIDE.md](MCP-SETUP-GUIDE.md) for details.
 
+## 🏗️ How It All Works Together
+
+```
+User: "Show me networks in 192.168.1.0/24"
+    ↓
+Natural Language → Claude LLM (analyzes intent, extracts parameters)
+    ↓
+Claude selects tool → infoblox_list_networks
+    ↓
+API Confirmation System (shows preview with curl equivalent)
+    ↓
+User confirms → yes
+    ↓
+InfoBlox WAPI Call → GET /wapi/v2.13.1/network
+    ↓
+Results returned to user
+```
+
+**Complete pipeline:**
+1. **Natural Language Input** - User types query in plain English
+2. **Claude LLM Processing** - AI extracts intent and parameters
+3. **MCP Tool Selection** - Structured tool call generated
+4. **API Confirmation** - User sees preview, can edit, cancel, or confirm
+5. **WAPI Execution** - Secure REST API call to InfoBlox
+6. **Results Display** - Formatted response to user
+
+See [ARCHITECTURE-FLOW.md](ARCHITECTURE-FLOW.md) for complete technical details.
+
 ## 📚 Documentation
 
 ### Getting Started
+- [ARCHITECTURE-FLOW.md](ARCHITECTURE-FLOW.md) - **How everything works together** (NEW! 🌟)
 - [MCP-SETUP-GUIDE.md](MCP-SETUP-GUIDE.md) - **Automatic MCP setup** (NEW!)
 - [API-CONFIRMATION-GUIDE.md](API-CONFIRMATION-GUIDE.md) - **API confirmation system** (NEW!)
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide with Python version options
