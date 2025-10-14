@@ -376,7 +376,7 @@ def process_tool_call(tool_name, tool_input):
     infoblox_tools = [
         "infoblox_list_networks", "infoblox_get_network", "infoblox_create_network",
         "infoblox_search_records", "infoblox_list_dhcp_leases", "infoblox_query",
-        "infoblox_find_network_detailed"
+        "infoblox_find_network_detailed", "infoblox_find_ip_detailed", "infoblox_find_zone_detailed"
     ]
 
     if tool_name in infoblox_tools:
@@ -416,6 +416,18 @@ def process_tool_call(tool_name, tool_input):
         from network_info import NetworkInfoClient
         client = NetworkInfoClient()
         result = client.find_network_detailed(tool_input.get("network"))
+        # Return formatted output
+        return {"output": client.format_output(result), "raw_data": result}
+    elif tool_name == "infoblox_find_ip_detailed":
+        from ip_info import IPInfoClient
+        client = IPInfoClient()
+        result = client.find_ip_detailed(tool_input.get("ip_address"))
+        # Return formatted output
+        return {"output": client.format_output(result), "raw_data": result}
+    elif tool_name == "infoblox_find_zone_detailed":
+        from zone_info import ZoneInfoClient
+        client = ZoneInfoClient()
+        result = client.find_zone_detailed(tool_input.get("zone_name"))
         # Return formatted output
         return {"output": client.format_output(result), "raw_data": result}
 
@@ -580,6 +592,28 @@ def get_all_tools():
                     "network": {"type": "string", "description": "Network in CIDR notation (e.g., 192.168.1.0/24)"}
                 },
                 "required": ["network"]
+            }
+        },
+        {
+            "name": "infoblox_find_ip_detailed",
+            "description": "Find IP address with comprehensive details for operations teams. Returns allocation status (fixed/DHCP/available), MAC address, hostname, network info, DNS records (A/PTR with last queried time), DHCP status. Use for 'find IP' or 'show IP details' queries.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "ip_address": {"type": "string", "description": "IP address (e.g., 192.168.1.50)"}
+                },
+                "required": ["ip_address"]
+            }
+        },
+        {
+            "name": "infoblox_find_zone_detailed",
+            "description": "Find DNS zone with comprehensive details for operations teams. Returns zone type, NS group with name servers, subzones list, SOA configuration, record statistics by type, extensible attributes. Use for 'find zone' or 'show zone details' queries.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "zone_name": {"type": "string", "description": "Zone FQDN (e.g., corp.local or example.com)"}
+                },
+                "required": ["zone_name"]
             }
         }
     ]
