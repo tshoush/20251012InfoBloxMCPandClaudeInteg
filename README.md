@@ -19,10 +19,12 @@ cd 20251012InfoBloxMCPandClaudeInteg
 - ✅ Guide you through configuration (InfoBlox + Claude credentials)
 - ✅ Create Python virtual environment
 - ✅ Install all dependencies
-- ✅ Configure MCP server in Claude Desktop (macOS only)
+- ✅ Configure MCP server in Claude Desktop (optional, macOS/Windows only)
 - ✅ Build RAG knowledge base (optional)
 - ✅ Run tests to verify installation
 - ✅ Save configuration to .env file
+
+**Note:** MCP works on all platforms via CLI (`claude-chat-mcp.py`). Claude Desktop auto-configuration is macOS/Windows only.
 
 **Total setup time: 3-5 minutes**
 
@@ -35,7 +37,7 @@ cd 20251012InfoBloxMCPandClaudeInteg
 # Setup without tests
 ./setup.py --no-tests
 
-# Setup without MCP server (for RHEL/Linux)
+# Setup without Claude Desktop auto-configuration
 ./setup.py --no-mcp
 ```
 
@@ -202,14 +204,14 @@ export RAG_DB_PATH="~/.infoblox-rag"
 ### Chat Interfaces
 
 ```bash
-# RAG-enhanced chat (recommended)
+# MCP-based chat (most powerful - 140+ tools, works on all platforms)
+python claude-chat-mcp.py
+
+# RAG-enhanced chat (6 common tools with InfoBlox knowledge base)
 python claude-chat-rag.py
 
-# InfoBlox-focused chat
+# InfoBlox-focused chat (6 common tools, direct WAPI)
 python claude-chat-infoblox.py
-
-# MCP-based chat (most powerful)
-python claude-chat-mcp.py
 ```
 
 ### Utility Scripts
@@ -225,9 +227,21 @@ python infoblox-explorer.py
 python infoblox-mcp-server.py
 ```
 
-## 🔌 MCP Server - Automatic Setup
+## 🔌 MCP Server
 
-**Zero manual configuration required!**
+### CLI Usage (All Platforms)
+
+MCP works on **all platforms** via the CLI interface:
+
+```bash
+python claude-chat-mcp.py  # 140+ InfoBlox tools via MCP
+```
+
+This works on macOS, Linux (including RHEL 7.9), and Windows - no Claude Desktop required!
+
+### Claude Desktop Integration (macOS/Windows Only)
+
+For Claude Desktop users, automatic configuration is available:
 
 ```bash
 # Automatically configure MCP server in Claude Desktop
@@ -238,7 +252,7 @@ python infoblox-mcp-server.py
 ```
 
 The script automatically:
-- ✅ Detects Claude Desktop installation
+- ✅ Detects Claude Desktop installation (macOS/Windows)
 - ✅ Configures InfoBlox MCP server
 - ✅ Sets up environment variables
 - ✅ Tests connection

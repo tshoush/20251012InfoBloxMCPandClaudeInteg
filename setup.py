@@ -166,13 +166,17 @@ def install_dependencies():
 
 
 def setup_mcp_server():
-    """Setup MCP server in Claude Desktop"""
-    print_step(4, "MCP Server", "Configure InfoBlox MCP server in Claude Desktop")
+    """Setup MCP server in Claude Desktop (auto-configuration)"""
+    print_step(4, "Claude Desktop MCP Configuration", "Auto-configure MCP server in Claude Desktop (macOS/Windows only)")
 
-    # Check if macOS
-    if platform.system() != "Darwin":
-        print(f"{Colors.YELLOW}⚠ MCP server setup only available on macOS{Colors.RESET}")
-        print(f"{Colors.CYAN}  RHEL 7.9 users: Use claude-chat-rag.py or claude-chat-infoblox.py instead{Colors.RESET}")
+    # Check if macOS/Windows
+    if platform.system() not in ["Darwin", "Windows"]:
+        print(f"{Colors.BRIGHT_GREEN}✓ MCP server ready for CLI use{Colors.RESET}")
+        print(f"{Colors.CYAN}  Note: Claude Desktop auto-configuration is macOS/Windows only{Colors.RESET}")
+        print(f"{Colors.CYAN}  But you can use MCP with CLI on any platform:{Colors.RESET}")
+        print(f"{Colors.BRIGHT_WHITE}    python claude-chat-mcp.py{Colors.RESET}  # 140+ tools via MCP")
+        print(f"{Colors.CYAN}  Or use built-in tools:{Colors.RESET}")
+        print(f"{Colors.BRIGHT_WHITE}    python claude-chat-rag.py{Colors.RESET}      # 6 common tools")
         return True
 
     # Check if Claude Desktop is installed
@@ -268,8 +272,9 @@ def print_summary():
     else:
         print(f"{Colors.BRIGHT_CYAN}RHEL 7.9 / Linux Users:{Colors.RESET}")
         print(f"  1. {Colors.GREEN}Try a chat interface:{Colors.RESET}")
-        print(f"     {Colors.CYAN}python claude-chat-rag.py{Colors.RESET}      # RAG-enhanced (recommended)")
-        print(f"     {Colors.CYAN}python claude-chat-infoblox.py{Colors.RESET} # Direct InfoBlox")
+        print(f"     {Colors.CYAN}python claude-chat-mcp.py{Colors.RESET}      # MCP with 140+ tools (recommended)")
+        print(f"     {Colors.CYAN}python claude-chat-rag.py{Colors.RESET}      # RAG-enhanced, 6 common tools")
+        print(f"     {Colors.CYAN}python claude-chat-infoblox.py{Colors.RESET} # Direct InfoBlox, 6 common tools")
         print()
 
     print(f"  3. {Colors.GREEN}Test an API call:{Colors.RESET}")
@@ -317,7 +322,7 @@ Examples:
     parser.add_argument('--no-tests', action='store_true',
                        help='Skip running tests')
     parser.add_argument('--no-mcp', action='store_true',
-                       help='Skip MCP server setup')
+                       help='Skip Claude Desktop MCP auto-configuration (macOS/Windows only)')
     parser.add_argument('--no-rag', action='store_true',
                        help='Skip RAG database build')
     parser.add_argument('--auto', action='store_true',

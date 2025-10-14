@@ -1,6 +1,18 @@
-# MCP Server Automatic Setup Guide
+# MCP Server Setup Guide
 
-## TL;DR - One Command Setup
+## Important: MCP Works on All Platforms!
+
+**MCP functionality works on all platforms** (macOS, Linux, Windows) via CLI:
+
+```bash
+python claude-chat-mcp.py  # 140+ tools via MCP - works everywhere!
+```
+
+This guide is specifically about **Claude Desktop auto-configuration** (macOS/Windows only). If you're on RHEL 7.9 or Linux without Claude Desktop, **you can skip this guide** and use `claude-chat-mcp.py` directly.
+
+## TL;DR - Claude Desktop Auto-Configuration
+
+**For Claude Desktop users only (macOS/Windows):**
 
 ```bash
 # Automatically configure MCP server in Claude Desktop

@@ -89,9 +89,9 @@ This system translates natural language queries into InfoBlox WAPI API calls thr
 ### 1. Chat Interface Layer
 
 **Files:**
-- `claude-chat-rag.py` - RAG-enhanced chat with InfoBlox knowledge base
-- `claude-chat-infoblox.py` - Direct InfoBlox WAPI integration
-- `claude-chat-mcp.py` - MCP server integration (macOS only)
+- `claude-chat-mcp.py` - MCP server integration (140+ tools, all platforms)
+- `claude-chat-rag.py` - RAG-enhanced chat with InfoBlox knowledge base (6 common tools)
+- `claude-chat-infoblox.py` - Direct InfoBlox WAPI integration (6 common tools)
 
 **Responsibilities:**
 - Accept natural language input from user
@@ -167,7 +167,7 @@ def process_tool_call(tool_name, tool_input):
         return infoblox_list_networks(...)
 ```
 
-#### B. MCP Server (claude-chat-mcp.py - macOS only)
+#### B. MCP Server (claude-chat-mcp.py - All Platforms)
 ```python
 # MCP server exposes 140+ InfoBlox WAPI endpoints
 # Chat interface connects via stdio
@@ -183,8 +183,9 @@ result = await mcp_manager.call_tool("infoblox", "infoblox_list_networks", {...}
 
 **MCP Server File:** `infoblox-mcp-server.py`
 - Exposes 140+ InfoBlox WAPI endpoints as tools
-- Uses stdio for communication
-- Auto-discovered by Claude Desktop (macOS)
+- Uses stdio for communication (works on all platforms)
+- Can be auto-configured in Claude Desktop (macOS/Windows)
+- Works via CLI on all platforms including RHEL 7.9
 
 ### 4. API Confirmation System
 
@@ -391,21 +392,32 @@ More accurate tool selection and parameter mapping
 
 ## Platform Differences
 
-### macOS (Development)
-- ✅ Claude Desktop integration available
-- ✅ MCP server can be auto-attached to Claude Desktop
-- ✅ All 3 chat interfaces work (RAG, InfoBlox, MCP)
-- ✅ GUI + CLI
+### MCP Server: Works on All Platforms
 
-### RHEL 7.9 (Production)
-- ❌ No Claude Desktop (no GUI)
-- ❌ MCP server not usable standalone (requires Claude Desktop)
-- ✅ CLI chat interfaces work (RAG, InfoBlox)
-- ✅ Direct WAPI integration (no MCP needed)
+**Important:** MCP works on **all platforms** (macOS, Linux, Windows) via CLI!
+
+```bash
+python claude-chat-mcp.py  # 140+ tools via MCP - works everywhere!
+```
+
+The MCP server communicates via stdio and works on any platform. The only platform difference is Claude Desktop integration.
+
+### macOS/Windows
+- ✅ Claude Desktop GUI available
+- ✅ MCP server can be auto-configured in Claude Desktop
+- ✅ All 3 chat interfaces work (MCP, RAG, InfoBlox)
+- ✅ GUI + CLI options
+
+### RHEL 7.9 / Linux
+- ❌ No Claude Desktop GUI
+- ✅ **MCP works via CLI** (`claude-chat-mcp.py` - 140+ tools)
+- ✅ All 3 CLI chat interfaces work (MCP, RAG, InfoBlox)
+- ✅ Full MCP functionality available
 
 **Recommendation:**
-- **macOS**: Use `claude-chat-mcp.py` with Claude Desktop integration (140+ tools via MCP)
-- **RHEL 7.9**: Use `claude-chat-rag.py` or `claude-chat-infoblox.py` (6 common tools built-in)
+- **All platforms**: Use `claude-chat-mcp.py` for most tools (140+ via MCP)
+- **Alternative**: Use `claude-chat-rag.py` (6 common tools + InfoBlox knowledge base)
+- **macOS/Windows**: Optionally use Claude Desktop GUI with MCP auto-configured
 
 ## Configuration Files
 
