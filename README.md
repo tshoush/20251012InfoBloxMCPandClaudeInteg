@@ -214,6 +214,40 @@ python claude-chat-rag.py
 python claude-chat-infoblox.py
 ```
 
+### Standalone Query Tool (NEW! 🆕)
+
+Self-contained script for quick InfoBlox queries - no Claude, no MCP, just direct WAPI access:
+
+```bash
+# Query network information
+./infoblox-query.py -n 192.168.1.0/24
+
+# Query IP address details
+./infoblox-query.py -i 192.168.1.50
+
+# Query DNS zone information
+./infoblox-query.py -z corp.local
+
+# Quiet mode (use saved config, no prompts)
+./infoblox-query.py -n 192.168.1.0/24 -q
+```
+
+**Features:**
+- ✅ **Self-contained** - Single script, no dependencies on other project files
+- ✅ **Interactive config** - Prompts for credentials on first run with smart defaults
+- ✅ **Secure storage** - Saves config to `~/.infoblox-query.conf` (600 permissions)
+- ✅ **Quiet mode** - Use `-q` flag for automation/scripting
+- ✅ **Multi-API orchestration** - Combines multiple WAPI calls for comprehensive results
+- ✅ **Formatted output** - Color-coded, structured information display
+- ✅ **WAPI v2.13.1** - InfoBlox 9.3 compatible
+
+Perfect for:
+- Quick lookups without AI overhead
+- Automation scripts
+- CI/CD pipelines
+- Network operations troubleshooting
+- Users who prefer direct API access
+
 ### Utility Scripts
 
 ```bash
@@ -294,6 +328,7 @@ See [ARCHITECTURE-FLOW.md](ARCHITECTURE-FLOW.md) for complete technical details.
 ### Getting Started
 - [demo.html](demo.html) - **Interactive presentation** - Open in browser! (NEW! 🌟)
 - [USE-CASES.md](USE-CASES.md) - **Operations use cases** - Real-world workflows (NEW! 🌟)
+- [STANDALONE-QUERY-TOOL.md](STANDALONE-QUERY-TOOL.md) - **Standalone query tool guide** (NEW! 🆕)
 - [ARCHITECTURE-FLOW.md](ARCHITECTURE-FLOW.md) - **How everything works together** (NEW! 🌟)
 - [MCP-SETUP-GUIDE.md](MCP-SETUP-GUIDE.md) - **Automatic MCP setup** (NEW!)
 - [API-CONFIRMATION-GUIDE.md](API-CONFIRMATION-GUIDE.md) - **API confirmation system** (NEW!)

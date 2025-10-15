@@ -361,6 +361,35 @@ Modified By:           dnsadmin
 - **claude-chat-infoblox.py** - Direct integration
 - **CLI** - Direct execution: `python network_info.py`, `python ip_info.py`, `python zone_info.py`
 
+### Standalone Alternative (NEW! 🆕)
+
+For users who prefer direct WAPI access without AI/MCP overhead:
+
+**`infoblox-query.py`** - Self-contained query tool combining all 3 use cases:
+
+```bash
+# Query network
+./infoblox-query.py -n 192.168.1.0/24
+
+# Query IP address
+./infoblox-query.py -i 192.168.1.50
+
+# Query DNS zone
+./infoblox-query.py -z corp.local
+
+# Quiet mode (automation/scripting)
+./infoblox-query.py -n 192.168.1.0/24 -q
+```
+
+**Key Differences:**
+- **No Claude AI** - Direct WAPI access only
+- **No MCP dependency** - Self-contained single script
+- **Separate config** - Uses `~/.infoblox-query.conf` (not .env)
+- **Faster** - No AI overhead, instant results
+- **Perfect for:** Quick lookups, automation, CI/CD pipelines, scripting
+
+See README.md for complete documentation.
+
 ---
 
 ## How to Add New Use Cases
