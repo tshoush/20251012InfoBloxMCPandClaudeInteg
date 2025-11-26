@@ -201,18 +201,61 @@ export RAG_DB_PATH="~/.infoblox-rag"
 
 ## 🛠️ Available Tools
 
-### Chat Interfaces
+### Chat Interfaces - Which One Should I Use?
+
+The project provides **3 alternative chat interfaces** with different capabilities. They are **not** a pipeline - choose the one that fits your needs:
+
+| Interface | Tools | Docs | Best For | Speed |
+|-----------|-------|------|----------|-------|
+| **claude-chat-infoblox.py** | 6 basic | ❌ No | Quick lookups, simple queries | ⚡ Fastest |
+| **claude-chat-rag.py** | 6 basic | ✅ Yes | Learning + operations, "how-to" questions | 🔵 Medium |
+| **claude-chat-mcp.py** | 143 advanced | ❌ No | Complex operations, power users | 🔵 Medium |
+
+**Quick Decision Guide:**
+
+```
+Need to learn InfoBlox concepts?
+├─ YES → claude-chat-rag.py (has documentation)
+└─ NO → Need advanced operations (create/update/delete)?
+         ├─ YES → claude-chat-mcp.py (143 tools)
+         └─ NO → claude-chat-infoblox.py (fast & simple)
+```
+
+**Detailed comparison:** See [CHAT-INTERFACES-GUIDE.md](CHAT-INTERFACES-GUIDE.md)
+
+#### 1. claude-chat-infoblox.py - Fast & Simple ⚡
 
 ```bash
-# MCP-based chat (most powerful - 140+ tools, works on all platforms)
-python claude-chat-mcp.py
-
-# RAG-enhanced chat (6 common tools with InfoBlox knowledge base)
-python claude-chat-rag.py
-
-# InfoBlox-focused chat (6 common tools, direct WAPI)
 python claude-chat-infoblox.py
 ```
+
+- **Tools:** 6 basic InfoBlox operations
+- **Knowledge:** No documentation context
+- **Best for:** Quick lookups, simple queries
+- **Example:** "List all networks", "Find IP 192.168.1.50"
+
+#### 2. claude-chat-rag.py - Knowledge-Enhanced 📚
+
+```bash
+python claude-chat-rag.py
+```
+
+- **Tools:** 6 basic InfoBlox operations
+- **Knowledge:** Full InfoBlox documentation via RAG
+- **Best for:** Learning + operations, explanations
+- **Example:** "How do I configure DHCP?", "Explain network containers"
+- **Recommended:** Best starting point for most users
+
+#### 3. claude-chat-mcp.py - Full Power 🚀
+
+```bash
+python claude-chat-mcp.py
+```
+
+- **Tools:** 143 InfoBlox WAPI tools (almost every endpoint)
+- **Knowledge:** No documentation context
+- **Best for:** Complex operations, advanced features
+- **Example:** "Create fixed address", "Update DNS record TTL"
 
 ### Standalone Query Tool (NEW! 🆕)
 
@@ -327,6 +370,7 @@ See [ARCHITECTURE-FLOW.md](ARCHITECTURE-FLOW.md) for complete technical details.
 
 ### Getting Started
 - [demo.html](demo.html) - **Interactive presentation** - Open in browser! (NEW! 🌟)
+- [CHAT-INTERFACES-GUIDE.md](CHAT-INTERFACES-GUIDE.md) - **Chat interfaces comparison** - Which one to use? (NEW! 🆕)
 - [USE-CASES.md](USE-CASES.md) - **Operations use cases** - Real-world workflows (NEW! 🌟)
 - [STANDALONE-QUERY-TOOL.md](STANDALONE-QUERY-TOOL.md) - **Standalone query tool guide** (NEW! 🆕)
 - [ARCHITECTURE-FLOW.md](ARCHITECTURE-FLOW.md) - **How everything works together** (NEW! 🌟)
